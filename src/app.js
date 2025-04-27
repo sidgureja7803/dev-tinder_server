@@ -11,7 +11,7 @@ require("./utils/cronjob");
 
 app.use(
   cors({
-    origin: 'http://localhost:5173', // Frontend URL
+    origin: ['http://localhost:5173', 'https://dev-tinder-sidgureja.netlify.app/'], // Frontend URLs
     credentials: true,               // Allow cookies
   })
 );
