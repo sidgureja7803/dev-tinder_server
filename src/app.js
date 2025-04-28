@@ -9,10 +9,23 @@ const bcrypt = require("bcrypt");
 require("dotenv").config();
 require("./utils/cronjob");
 
+const allowedOrigins = [
+  'http://localhost:5173',  // Localhost URL
+  process.env.FRONTEND_URL,  // Frontend URL from environment variables
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',  // Allow requests from any origin
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes(origin) || !origin) {
+      // Allow requests from the allowed origins or from no origin (for example, during a server-side request)
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
