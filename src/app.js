@@ -5,22 +5,21 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const http = require("http");
 const bcrypt = require("bcrypt");
-require("dotenv").config();
 
+
+require("dotenv").config();
 require("./utils/cronjob");
 
-// CORS configuration
-app.use(
-  cors({
-    origin: 'http://localhost:5173',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
-  })
-);
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Authorization']
+}));
 
-// Parse JSON bodies and cookies
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 const authRouter = require("./routes/auth");
@@ -33,7 +32,6 @@ const chatRouter = require("./routes/chat");
 const feedRouter = require("./routes/feed");
 const matchRouter = require("./routes/match");
 
-// Routes
 app.use("/", authRouter);
 app.use("/", profileRouter);
 app.use("/", requestRouter);
@@ -54,6 +52,7 @@ app.get("/health", (req, res) => {
 
 const server = http.createServer(app);
 initializeSocket(server);
+
 
 connectDB()
   .then(() => {
