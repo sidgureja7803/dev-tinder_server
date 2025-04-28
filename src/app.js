@@ -10,9 +10,9 @@ require("dotenv").config();
 require("./utils/cronjob");
 
 app.use(cors({
-  origin: '*',  // Allow all origins
-  credentials: true,  // Allow credentials (cookies, etc.)
+  origin: 'https://dev-tinder-jet.vercel.app', // Your frontend URL
 }));
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
