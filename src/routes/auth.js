@@ -291,7 +291,7 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ emailId });
     if (!user) {
       return res.status(401).send({
-        message: "Invalid credentials, user doesn't exist",
+        message: "Invalid credentials",
       });
     }
 
@@ -301,7 +301,7 @@ router.post("/login", async (req, res) => {
     
     if (!isPasswordValid) {
       return res.status(401).send({
-        message: "Invalid credentials, password doesn't match",
+        message: "Invalid credentials",
       });
     }
 
@@ -338,6 +338,7 @@ router.post("/login", async (req, res) => {
     });
   }
 });
+
 // Logout route
 router.post("/logout", (req, res) => {
   res.clearCookie("jwt");
