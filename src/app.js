@@ -6,15 +6,12 @@ const cors = require("cors");
 const http = require("http");
 const bcrypt = require("bcrypt");
 
-
 require("dotenv").config();
 require("./utils/cronjob");
 
 app.use(cors({
-  origin: '*',  // Allow requests from any origin
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',  // Allow requests from any origin
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Accept', 'Authorization']
 }));
 
 app.use(express.json());
