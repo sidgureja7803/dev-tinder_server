@@ -1,72 +1,43 @@
-const express = require("express");
-const connectDB = require("./config/database");
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const routes = require('./routes');
+require('dotenv').config();
+
 const app = express();
-const cookieParser = require("cookie-parser");
-const cors = require("cors");
-const http = require("http");
-const bcrypt = require("bcrypt");
-require("dotenv").config();
 
-require("./utils/cronjob");
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Authorization']
+}));
 
-app.use(
-  cors({
-    origin: '*',           // Allow all domains
-    credentials: true,     // Allow cookies
-  })
-);
-
+// Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-const authRouter = require("./routes/auth");
-const profileRouter = require("./routes/profile");
-const requestRouter = require("./routes/request");
-const userRouter = require("./routes/user");
-const paymentRouter = require("./routes/payment");
-const initializeSocket = require("./utils/socket");
-const chatRouter = require("./routes/chat");
-const feedRouter = require("./routes/feed");
-const matchRouter = require("./routes/match");
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
-app.use("/", authRouter);
-app.use("/", profileRouter);
-app.use("/", requestRouter);
-app.use("/", userRouter);
-app.use("/", paymentRouter);
-app.use("/", chatRouter);
-app.use("/", feedRouter);
-app.use("/match", matchRouter);
+// Routes
+app.use('/api', routes);
 
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.status(200).send({
-    status: "ok",
-    message: "Server is running",
-    timestamp: new Date().toISOString()
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal server error'
   });
 });
 
-const server = http.createServer(app);
-initializeSocket(server);
-
-
-connectDB()
-  .then(() => {
-    console.log("Database connection established");
-    server.listen(7777, () => {
-      console.log("Server is successfully listening on port 7777");
-      
-      const password = '8193006167Sid@';  // The password you want to check
-      bcrypt.hash(password, 10).then(hashedPassword => {
-      console.log('Hashed Password:', hashedPassword);
-      }).catch(err => {
-    console.error('Error hashing password:', err);
-});
-      
-});
-
-  })
-  .catch((err) => {
-    console.error("Database cannot be connected!!", err);
-  });
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+}); 
