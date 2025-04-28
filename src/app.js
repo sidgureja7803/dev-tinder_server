@@ -10,7 +10,7 @@ require("dotenv").config();
 require("./utils/cronjob");
 
 const allowedOrigins = [
-  'http://localhost:5173',  // Localhost URL
+  'https://dev-tinder-sidgureja.netlify.app/',  // Localhost URL
   process.env.FRONTEND_URL,  // Frontend URL from environment variables
 ];
 
