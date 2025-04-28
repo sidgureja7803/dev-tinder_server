@@ -10,8 +10,10 @@ require("dotenv").config();
 require("./utils/cronjob");
 
 app.use(cors({
-  origin: '*',  // Allow all origins
+  origin: ['https://dev-tinder-jet.vercel.app', 'http://localhost:5173', 'https://dev-tinder-sidgureja.netlify.app/' ],  // Allow specific origins
   credentials: true,  // Allow credentials (cookies, etc.)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
 app.use(express.json());
