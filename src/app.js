@@ -9,23 +9,10 @@ const bcrypt = require("bcrypt");
 require("dotenv").config();
 require("./utils/cronjob");
 
-const allowedOrigins = [
-  'http://localhost:5173',  // Localhost URL
-  'https://dev-tinder-sidgureja.netlify.app/'  // Frontend URL from environment variables
-];
-
 app.use(cors({
-  origin: (origin, callback) => {
-    if (allowedOrigins.includes(origin) || !origin) {
-      // Allow requests from the allowed origins or from no origin (for example, during a server-side request)
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
+  origin: '*',  // Allow all origins
+  credentials: true,  // Allow credentials (cookies, etc.)
 }));
-
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
