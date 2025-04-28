@@ -291,7 +291,7 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ emailId });
     if (!user) {
       return res.status(401).send({
-        message: "Invalid credentials",
+        message: "Invalid credentials, user not found",
       });
     }
 
@@ -301,7 +301,7 @@ router.post("/login", async (req, res) => {
     
     if (!isPasswordValid) {
       return res.status(401).send({
-        message: "Invalid credentials",
+        message: "Invalid credentials, password is incorrect",
       });
     }
 
