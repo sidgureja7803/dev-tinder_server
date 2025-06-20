@@ -367,7 +367,7 @@ router.get("/me", authenticateUser, async (req, res) => {
         about: user.about,
         age: user.age,
         gender: user.gender,
-        isPremium: user.isPremium,
+        isVerified: user.isVerified,
       },
     });
   } catch (err) {

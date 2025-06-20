@@ -102,8 +102,8 @@ cron.schedule("0 8 * * *", async () => {
             <div class="stat-label">New Requests</div>
           </div>
           <div class="stat-item">
-            <div class="stat-number">${requests.filter(r => r.fromUserId.isPremium).length}</div>
-            <div class="stat-label">Premium Users</div>
+            <div class="stat-number">${requests.filter(r => r.fromUserId.isVerified).length}</div>
+            <div class="stat-label">Verified Users</div>
           </div>
         </div>
         <p>Don't keep fellow developers waiting! Check out who's interested in connecting with you and start building meaningful relationships in the tech community.</p>

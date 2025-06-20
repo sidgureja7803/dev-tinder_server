@@ -72,7 +72,7 @@ router.post("/firebase-auth", async (req, res) => {
         emailId: user.emailId,
         photoUrl: user.photoUrl,
         isVerified: user.isVerified,
-        isPremium: user.isPremium,
+        isVerified: user.isVerified,
         membershipType: user.membershipType
       }
     });
