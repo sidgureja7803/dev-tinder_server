@@ -1,4 +1,4 @@
-# DevTinder APIs
+# MergeMates APIs
 
 ## authRouter
 - POST /signup

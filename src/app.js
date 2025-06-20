@@ -6,11 +6,14 @@ const cors = require("cors");
 const http = require("http");
 const bcrypt = require("bcrypt");
 
+// Initialize Firebase Admin (this should be done early)
+require("./config/firebase");
+
 require("dotenv").config();
 require("./utils/cronjob");
 
 app.use(cors({
-  origin: ['https://dev-tinder-jet.vercel.app/', 'http://localhost:5173', 'https://dev-tinder-sidgureja.netlify.app/'],  // Allow specific origins
+      origin: ['https://mergemates-jet.vercel.app/', 'http://localhost:5173', 'https://mergemates-sidgureja.netlify.app/'],  // Allow specific origins
   credentials: true,  // Allow credentials (cookies, etc.)
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS',],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
@@ -29,8 +32,10 @@ const initializeSocket = require("./utils/socket");
 const chatRouter = require("./routes/chat");
 const feedRouter = require("./routes/feed");
 const matchRouter = require("./routes/match");
+const firebaseAuthRouter = require("./routes/firebaseAuth");
 
 app.use("/", authRouter);
+app.use("/", firebaseAuthRouter);
 app.use("/", profileRouter);
 app.use("/", requestRouter);
 app.use("/", userRouter);

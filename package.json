@@ -1,5 +1,5 @@
 {
-  "name": "devtinder",
+  "name": "mergemates",
   "version": "1.0.0",
   "description": "tinder for devs",
   "main": "index.js",
@@ -21,6 +21,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "firebase-admin": "^13.4.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.6.1",
     "node-cron": "^3.0.3",

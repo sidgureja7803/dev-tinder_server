@@ -1,27 +1,126 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { auth } = require("../config/firebase");
 
 const authenticateUser = async (req, res, next) => {
   try {
-    // Get token from cookies or Authorization header
-    const token = req.cookies.jwt || 
-                 (req.headers.authorization && req.headers.authorization.startsWith('Bearer') 
-                  ? req.headers.authorization.split(' ')[1] : null);
+    const authHeader = req.headers.authorization;
+    const cookieToken = req.cookies?.jwt;
+
+    // Check if Firebase token is present (Bearer token)
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return verifyFirebaseToken(req, res, next);
+    }
     
-    if (!token) {
-      return res.status(401).json({ message: "Authentication required" });
+    // Fallback to existing JWT cookie authentication
+    if (cookieToken) {
+      try {
+        const decoded = jwt.verify(cookieToken, process.env.JWT_SECRET || "your-secret-key");
+        
+        const user = await User.findById(decoded.userId);
+        if (!user) {
+          return res.status(401).json({
+            success: false,
+            message: 'User not found'
+          });
+        }
+        
+        req.user = user;
+        req.userId = user._id;
+        
+        return next();
+      } catch (error) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid JWT token'
+        });
+      }
+    }
+    
+    return res.status(401).json({
+      success: false,
+      message: 'No authentication token provided'
+    });
+  } catch (error) {
+    console.error('Authentication error:', error.message);
+    return res.status(401).json({ message: "Authentication failed" });
+  }
+};
+
+// Firebase token verification
+const verifyFirebaseToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided or invalid format'
+      });
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const idToken = authHeader.split(' ')[1];
+
+    // Verify the Firebase ID token
+    const decodedToken = await auth.verifyIdToken(idToken);
     
-    // Set userId in req for use in route handlers
-    req.userId = decoded.userId;
+    // Find or create user in our database
+    let user = await User.findOne({ emailId: decodedToken.email });
+    
+    if (!user) {
+      // Create new user if doesn't exist
+      const bcrypt = require('bcrypt');
+      user = new User({
+        firstName: decodedToken.name?.split(' ')[0] || 'User',
+        lastName: decodedToken.name?.split(' ').slice(1).join(' ') || '',
+        emailId: decodedToken.email,
+        photoUrl: decodedToken.picture,
+        isVerified: decodedToken.email_verified || true,
+        firebaseUid: decodedToken.uid,
+        // Generate a random password for database compatibility
+        password: await bcrypt.hash(Math.random().toString(36).slice(-8), 10)
+      });
+      
+      await user.save();
+      console.log('New user created from Firebase token:', user.emailId);
+    } else {
+      // Update Firebase UID if not present
+      if (!user.firebaseUid) {
+        user.firebaseUid = decodedToken.uid;
+        await user.save();
+      }
+    }
+
+    // Attach user info to request
+    req.user = user;
+    req.userId = user._id;
+    req.firebaseUser = decodedToken;
     
     next();
   } catch (error) {
-    console.error('Authentication error:', error.message);
-    return res.status(401).json({ message: "Invalid token" });
+    console.error('Firebase token verification failed:', error);
+    
+    if (error.code === 'auth/id-token-expired') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired. Please login again.',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+    
+    if (error.code === 'auth/id-token-revoked') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token revoked. Please login again.',
+        code: 'TOKEN_REVOKED'
+      });
+    }
+    
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token',
+      code: 'INVALID_TOKEN'
+    });
   }
 };
 
