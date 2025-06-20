@@ -3,7 +3,7 @@ const admin = require('firebase-admin');
 // Firebase Admin SDK configuration
 const firebaseConfig = {
   type: "service_account",
-  project_id: "devtinder-e1df5",
+  project_id: process.env.FIREBASE_PROJECT_ID,
   private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
   private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
   client_email: process.env.FIREBASE_CLIENT_EMAIL,
@@ -27,7 +27,7 @@ if (!admin.apps.length) {
     } else {
       // For development, you can use the Firebase CLI credentials
       admin.initializeApp({
-        projectId: "devtinder-e1df5"
+        projectId: process.env.FIREBASE_PROJECT_ID || "mergemates-project-id"
       });
       console.log('Firebase Admin initialized with default credentials');
     }
