@@ -161,10 +161,18 @@ const userSchema = new mongoose.Schema(
       college: String,
       degree: String,
       graduationYear: Number,
+      level: {
+        type: String,
+        enum: ["High School", "Diploma", "Bachelor's", "Master's", "PhD", "Other"]
+      },
       isStudent: {
         type: Boolean,
         default: false
       }
+    },
+    experienceLevel: {
+      type: String,
+      enum: ["Fresher", "0-2 years", "2-5 years", "5-10 years", "10+ years"]
     },
     skills: {
       type: [String],
@@ -213,7 +221,24 @@ const userSchema = new mongoose.Schema(
       genders: [{
         type: String,
         enum: ["Male", "Female", "Other"]
-      }]
+      }],
+      experienceLevels: [{
+        type: String,
+        enum: ["Fresher", "0-2 years", "2-5 years", "5-10 years", "10+ years"]
+      }],
+      educationLevels: [{
+        type: String,
+        enum: ["High School", "Diploma", "Bachelor's", "Master's", "PhD", "Other"]
+      }],
+      skills: [{
+        type: String
+      }],
+      maxDistance: {
+        type: Number,
+        default: 50,
+        min: 1,
+        max: 500
+      }
     },
     // Legacy preference fields for backward compatibility
     preferredAgeMin: {

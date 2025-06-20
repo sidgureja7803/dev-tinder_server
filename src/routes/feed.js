@@ -4,6 +4,24 @@ const { authenticateUser } = require("../middlewares/auth");
 const User = require("../models/User");
 const Swipe = require("../models/Swipe");
 
+// Helper function to get missing profile fields
+const getMissingFields = (user) => {
+  const missing = [];
+  
+  if (!user.firstName) missing.push('firstName');
+  if (!user.lastName) missing.push('lastName');
+  if (!user.dateOfBirth) missing.push('dateOfBirth');
+  if (!user.gender) missing.push('gender');
+  if (!user.bio || user.bio.length < 20) missing.push('bio');
+  if (!user.photos || user.photos.length === 0) missing.push('photos');
+  if (!user.profession) missing.push('profession');
+  if (!user.skills || user.skills.length === 0) missing.push('skills');
+  if (!user.location || !user.location.city) missing.push('location');
+  if (!user.preferences || !user.preferences.ageRange) missing.push('preferences');
+  
+  return missing;
+};
+
 // Simple compatibility scoring algorithm
 const calculateCompatibilityScore = (user1, user2) => {
   let score = 0;
@@ -73,6 +91,16 @@ router.get("/feed", authenticateUser, async (req, res) => {
       });
     }
     
+    // Check if profile is complete enough for matching
+    if (!currentUser.onboardingCompleted || !currentUser.isProfileComplete()) {
+      return res.status(400).send({
+        message: "Please complete your profile to start matching",
+        redirectTo: "/onboarding",
+        profileCompletion: currentUser.profileCompletion || 0,
+        missingFields: getMissingFields(currentUser)
+      });
+    }
+    
     // Update user's last active timestamp
     currentUser.lastActive = new Date();
     await currentUser.save();
@@ -94,37 +122,55 @@ router.get("/feed", authenticateUser, async (req, res) => {
       profileComplete: true
     };
     
-    // Apply gender preference filters
+    // Apply enhanced filtering based on user preferences
+    
+    // Gender preference filters
     if (currentUser.preferences?.genders?.length > 0) {
       query.gender = { $in: currentUser.preferences.genders };
     }
     
-    // Apply age filters
+    // Age filters with better date handling
     if (currentUser.preferences?.ageRange) {
       const { min, max } = currentUser.preferences.ageRange;
-      if (min || max) {
-        // Calculate date range for dateOfBirth
+      if (min !== undefined || max !== undefined) {
         const now = new Date();
-        if (max) {
+        if (max !== undefined) {
+          // Users born after this date are younger than max age
           const minBirthDate = new Date(now.getFullYear() - max - 1, now.getMonth(), now.getDate());
           query.dateOfBirth = { $gte: minBirthDate };
         }
-        if (min) {
+        if (min !== undefined) {
+          // Users born before this date are older than min age
           const maxBirthDate = new Date(now.getFullYear() - min, now.getMonth(), now.getDate());
           query.dateOfBirth = { ...query.dateOfBirth, $lte: maxBirthDate };
         }
       }
     }
     
-    // Apply profession filters
+    // Profession filters
     if (currentUser.preferences?.professions?.length > 0) {
       query.profession = { $in: currentUser.preferences.professions };
     }
     
-    // Apply religion filters
-    if (currentUser.preferences?.religion?.length > 0 && 
-        !currentUser.preferences.religion.includes('any')) {
-      query.religion = { $in: currentUser.preferences.religion };
+    // Religion filters
+    if (currentUser.preferences?.religions?.length > 0 && 
+        !currentUser.preferences.religions.includes('any')) {
+      query.religion = { $in: currentUser.preferences.religions };
+    }
+    
+    // Experience level filters
+    if (currentUser.preferences?.experienceLevels?.length > 0) {
+      query.experienceLevel = { $in: currentUser.preferences.experienceLevels };
+    }
+    
+    // Education filters
+    if (currentUser.preferences?.educationLevels?.length > 0) {
+      query['education.level'] = { $in: currentUser.preferences.educationLevels };
+    }
+    
+    // Skills filters (users who have at least one matching skill)
+    if (currentUser.preferences?.skills?.length > 0) {
+      query.skills = { $in: currentUser.preferences.skills };
     }
 
     let users = [];
