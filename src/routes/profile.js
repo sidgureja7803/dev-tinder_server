@@ -72,7 +72,7 @@ router.put("/profile", authenticateUser, async (req, res) => {
     const updates = req.body;
     
     // Fields that cannot be updated via this endpoint
-    const restrictedFields = ['password', 'emailId', 'isVerified', 'isPremium', 'membershipType', '_id'];
+    const restrictedFields = ['password', 'emailId', 'isVerified', '_id'];
     
     // Remove restricted fields
     restrictedFields.forEach(field => {

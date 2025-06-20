@@ -12,12 +12,25 @@ require("./config/firebase");
 require("dotenv").config();
 require("./utils/cronjob");
 
+const allowedOrigins = [
+  process.env.FRONTEND_SITE,         // https://www.mergemates.site
+  process.env.FRONTEND_VERCEL,       // https://mergemates-jet.vercel.app
+  process.env.FRONTEND_LOCAL,        // http://localhost:5173
+];
+
 app.use(cors({
-      origin: ['https://mergemates-jet.vercel.app/', 'http://localhost:5173', 'https://mergemates-sidgureja.netlify.app/'],  // Allow specific origins
-  credentials: true,  // Allow credentials (cookies, etc.)
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS',],
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
