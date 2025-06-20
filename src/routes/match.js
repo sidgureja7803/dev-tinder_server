@@ -20,13 +20,7 @@ router.post('/swipe/:userId', authenticateUser, async (req, res) => {
     // Get current user
     const currentUser = await User.findById(req.userId);
     
-    // Check if user has reached daily swipe limit (free users only)
-    if (!currentUser.isPremium && currentUser.hasReachedSwipeLimit()) {
-      return res.status(403).send({
-        message: "Daily swipe limit reached. Upgrade to premium for unlimited swipes!",
-        limitReached: true
-      });
-    }
+    // Free for everyone - no daily swipe limits
     
     // Make sure swiped user exists
     const swipedUser = await User.findById(swipedUserId);
@@ -39,17 +33,13 @@ router.post('/swipe/:userId', authenticateUser, async (req, res) => {
     // Record swipe
     await Swipe.swipe(req.userId, swipedUserId, action);
     
-    // Update swipe count (except for premium users)
-    if (!currentUser.isPremium) {
-      currentUser.swipesCount += 1;
-      await currentUser.save();
-    }
+    // No swipe counting needed - unlimited swipes for everyone
     
     // Return early if action is 'pass'
     if (action === 'pass') {
       return res.status(200).send({
         message: "Swipe recorded successfully",
-        remaining: currentUser.isPremium ? "unlimited" : (currentUser.dailySwipesLimit - currentUser.swipesCount)
+        remaining: "unlimited"
       });
     }
     
@@ -81,7 +71,7 @@ router.post('/swipe/:userId', authenticateUser, async (req, res) => {
             matchScore: match.matchScore,
             mutualInterests: match.mutualInterests
           },
-          remaining: currentUser.isPremium ? "unlimited" : (currentUser.dailySwipesLimit - currentUser.swipesCount)
+          remaining: "unlimited"
         });
       }
     }
@@ -89,7 +79,7 @@ router.post('/swipe/:userId', authenticateUser, async (req, res) => {
     // No match yet
     res.status(200).send({
       message: "Swipe recorded successfully",
-      remaining: currentUser.isPremium ? "unlimited" : (currentUser.dailySwipesLimit - currentUser.swipesCount)
+      remaining: "unlimited"
     });
   } catch (err) {
     res.status(500).send({

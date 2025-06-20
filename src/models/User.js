@@ -409,26 +409,9 @@ userSchema.methods.generateToken = function() {
   );
 };
 
-// Enhanced swipe limit checking
+// Everyone gets unlimited swipes - app is free
 userSchema.methods.hasReachedSwipeLimit = function() {
-  // Premium users have unlimited swipes
-  if (this.isPremium || this.premiumFeatures.unlimitedSwipes) {
-    return false;
-  }
-
-  // Reset swipe count if it's a new day
-  const today = new Date();
-  const resetDate = new Date(this.swipingData.lastSwipeReset);
-  
-  if (today.getDate() !== resetDate.getDate() || 
-      today.getMonth() !== resetDate.getMonth() || 
-      today.getFullYear() !== resetDate.getFullYear()) {
-    this.swipingData.dailySwipeCount = 0;
-    this.swipingData.lastSwipeReset = today;
-    return false;
-  }
-  
-  return this.swipingData.dailySwipeCount >= this.swipingData.dailySwipeLimit;
+  return false; // No limits for anyone
 };
 
 // Calculate profile completion percentage

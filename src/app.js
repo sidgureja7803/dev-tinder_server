@@ -27,7 +27,7 @@ const authRouter = require("./routes/auth");
 const profileRouter = require("./routes/profile");
 const requestRouter = require("./routes/request");
 const userRouter = require("./routes/user");
-const paymentRouter = require("./routes/payment");
+
 const initializeSocket = require("./utils/socket");
 const chatRouter = require("./routes/chat");
 const feedRouter = require("./routes/feed");
@@ -39,7 +39,7 @@ app.use("/", firebaseAuthRouter);
 app.use("/", profileRouter);
 app.use("/", requestRouter);
 app.use("/", userRouter);
-app.use("/", paymentRouter);
+
 app.use("/", chatRouter);
 app.use("/", feedRouter);
 app.use("/match", matchRouter);
