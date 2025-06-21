@@ -57,9 +57,34 @@ router.post("/signup", async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ emailId });
     if (existingUser) {
-      return res.status(400).send({
-        message: "User already exists with this email",
-      });
+      if (existingUser.isVerified) {
+        return res.status(400).send({
+          message: "User already registered with this email. Please login instead.",
+        });
+      } else {
+        // User exists but not verified, resend OTP
+        const otp = generateOTP();
+        
+        // Store OTP with expiry (10 minutes)
+        otpStorage[emailId] = {
+          otp,
+          expiresAt: Date.now() + 10 * 60 * 1000,
+        };
+
+        // Send OTP to user's email
+        await sendOTP(emailId, otp);
+
+        return res.status(200).send({
+          message: "Account exists but not verified. Verification code sent to email.",
+          data: {
+            userId: existingUser._id,
+            firstName: existingUser.firstName,
+            lastName: existingUser.lastName,
+            emailId: existingUser.emailId,
+            isVerified: existingUser.isVerified,
+          },
+        });
+      }
     }
 
     // Generate OTP
@@ -85,6 +110,7 @@ router.post("/signup", async (req, res) => {
       emailId,
       password: hashedPassword,
       isVerified: false,
+      onboardingCompleted: false,
     });
 
     await newUser.save();
@@ -97,6 +123,7 @@ router.post("/signup", async (req, res) => {
         lastName: newUser.lastName,
         emailId: newUser.emailId,
         isVerified: newUser.isVerified,
+        onboardingCompleted: newUser.onboardingCompleted,
       },
     });
   } catch (err) {
@@ -155,6 +182,9 @@ router.post("/verify-otp", async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
+    // Calculate profile completion
+    user.calculateProfileCompletion();
+
     res.status(200).send({
       message: "Email verified successfully",
       data: {
@@ -163,6 +193,9 @@ router.post("/verify-otp", async (req, res) => {
         lastName: user.lastName,
         emailId: user.emailId,
         isVerified: user.isVerified,
+        onboardingCompleted: user.onboardingCompleted,
+        profileCompletion: user.profileCompletion,
+        requiresOnboarding: !user.onboardingCompleted || user.profileCompletion < 60
       },
     });
   } catch (err) {
@@ -189,6 +222,12 @@ router.post("/resend-otp", async (req, res) => {
     if (!user) {
       return res.status(404).send({
         message: "User not found",
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).send({
+        message: "User is already verified",
       });
     }
 
@@ -236,7 +275,8 @@ router.post("/oauth/google", async (req, res) => {
         lastName: lastName || "",
         emailId,
         photoUrl,
-        isVerified: true, // Google users are already verified
+        isVerified: true, // OAuth users are already verified
+        onboardingCompleted: false,
         password: await bcrypt.hash(Math.random().toString(36).slice(-8), 10), // Random password
       });
       
@@ -256,6 +296,9 @@ router.post("/oauth/google", async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
+    // Calculate profile completion
+    user.calculateProfileCompletion();
+
     res.status(200).send({
       message: "Login successful",
       data: {
@@ -264,6 +307,77 @@ router.post("/oauth/google", async (req, res) => {
         lastName: user.lastName,
         emailId: user.emailId,
         photoUrl: user.photoUrl,
+        isVerified: user.isVerified,
+        onboardingCompleted: user.onboardingCompleted,
+        profileCompletion: user.profileCompletion,
+        requiresOnboarding: !user.onboardingCompleted || user.profileCompletion < 60
+      },
+    });
+  } catch (err) {
+    res.status(500).send({
+      message: "Something went wrong",
+      error: err.message,
+    });
+  }
+});
+
+// GitHub OAuth route
+router.post("/oauth/github", async (req, res) => {
+  try {
+    const { emailId, firstName, lastName, photoUrl } = req.body;
+
+    if (!emailId) {
+      return res.status(400).send({
+        message: "Email is required",
+      });
+    }
+
+    // Check if user exists
+    let user = await User.findOne({ emailId });
+    
+    if (!user) {
+      // Create user if doesn't exist
+      user = new User({
+        firstName: firstName || "GitHub",
+        lastName: lastName || "User",
+        emailId,
+        photoUrl,
+        isVerified: true, // OAuth users are already verified
+        onboardingCompleted: false,
+        password: await bcrypt.hash(Math.random().toString(36).slice(-8), 10), // Random password
+      });
+      
+      await user.save();
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, email: user.emailId },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "7d" }
+    );
+
+    // Set cookie
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Calculate profile completion
+    user.calculateProfileCompletion();
+
+    res.status(200).send({
+      message: "Login successful",
+      data: {
+        userId: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        emailId: user.emailId,
+        photoUrl: user.photoUrl,
+        isVerified: user.isVerified,
+        onboardingCompleted: user.onboardingCompleted,
+        profileCompletion: user.profileCompletion,
+        requiresOnboarding: !user.onboardingCompleted || user.profileCompletion < 60
       },
     });
   } catch (err) {
@@ -291,7 +405,16 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ emailId });
     if (!user) {
       return res.status(401).send({
-        message: "Invalid credentials, user not found",
+        message: "Invalid credentials. Please check your email and password.",
+      });
+    }
+
+    // Check if user is verified
+    if (!user.isVerified) {
+      return res.status(400).send({
+        message: "Please verify your email before logging in. Check your inbox for verification code.",
+        requiresVerification: true,
+        emailId: user.emailId
       });
     }
 
@@ -301,7 +424,7 @@ router.post("/login", async (req, res) => {
     
     if (!isPasswordValid) {
       return res.status(401).send({
-        message: "Invalid credentials, password is incorrect",
+        message: "Invalid credentials. Please check your email and password.",
       });
     }
 
@@ -318,7 +441,10 @@ router.post("/login", async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // Send response
+    // Calculate profile completion
+    user.calculateProfileCompletion();
+
+    // Send response with onboarding status
     res.status(200).send({
       message: "Login successful",
       data: {
@@ -327,7 +453,10 @@ router.post("/login", async (req, res) => {
         lastName: user.lastName,
         emailId: user.emailId,
         photoUrl: user.photoUrl,
-        isVerified: user.isVerified
+        isVerified: user.isVerified,
+        onboardingCompleted: user.onboardingCompleted,
+        profileCompletion: user.profileCompletion,
+        requiresOnboarding: !user.onboardingCompleted || user.profileCompletion < 60
       },
     });
   } catch (err) {

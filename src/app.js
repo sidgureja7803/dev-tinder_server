@@ -75,8 +75,8 @@ initializeSocket(server);
 connectDB()
   .then(() => {
     console.log("Database connection established");
-    server.listen(7777, () => {
-      console.log("Server is successfully listening on port 7777");
+    server.listen(process.env.PORT, () => {
+      console.log("Server is successfully listening on port", process.env.PORT);
       
       const password = '8193006167Sid@';  // The password you want to check
       bcrypt.hash(password, 10).then(hashedPassword => {
