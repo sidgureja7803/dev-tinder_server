@@ -99,16 +99,12 @@ router.post("/signup", async (req, res) => {
     // Send OTP to user's email
     await sendOTP(emailId, otp);
 
-    // Hash password with a consistent salt rounds
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user in unverified state
+    // Create user in unverified state (password will be hashed by User model pre-save hook)
     const newUser = new User({
       firstName,
       lastName,
       emailId,
-      password: hashedPassword,
+      password, // Don't hash here - let the User model handle it
       isVerified: false,
       onboardingCompleted: false,
     });
@@ -747,6 +743,27 @@ router.post("/resend-forgot-password-otp", async (req, res) => {
       message: "Something went wrong",
       error: err.message,
     });
+  }
+});
+
+// DEBUG: Test password hashing (remove in production)
+router.post("/debug-password", async (req, res) => {
+  try {
+    const { password } = req.body;
+    
+    // Hash password same way as User model
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Test comparison
+    const isMatch = await bcrypt.compare(password, hashedPassword);
+    
+    res.json({
+      original: password,
+      hashed: hashedPassword,
+      matches: isMatch
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
