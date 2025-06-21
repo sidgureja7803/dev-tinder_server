@@ -491,9 +491,7 @@ userSchema.methods.validatePassword = async function(passwordInputByUser) {
 
 // Update last active and calculate age before saving
 userSchema.pre("save", async function(next) {
-  if (this.isModified("password")) {
-    this.password = await bcrypt.hash(this.password, 10);
-  }
+  // NOTE: Password hashing is now handled manually in routes, not here
   
   // Update age from DOB if DOB is set
   if (this.dateOfBirth && this.isModified("dateOfBirth")) {

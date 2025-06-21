@@ -99,12 +99,16 @@ router.post("/signup", async (req, res) => {
     // Send OTP to user's email
     await sendOTP(emailId, otp);
 
-    // Create user in unverified state (password will be hashed by User model pre-save hook)
+    // Hash password before saving
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Create user in unverified state
     const newUser = new User({
       firstName,
       lastName,
       emailId,
-      password, // Don't hash here - let the User model handle it
+      password: hashedPassword,
       isVerified: false,
       onboardingCompleted: false,
     });
@@ -415,6 +419,11 @@ router.post("/login", async (req, res) => {
     }
 
     // Verify password using bcrypt compare
+    console.log("🔍 DEBUG - Password verification:");
+    console.log("Input password:", password);
+    console.log("Stored hash length:", user.password.length);
+    console.log("Stored hash starts with:", user.password.substring(0, 10));
+    
     const isPasswordValid = await bcrypt.compare(password, user.password);
     console.log("Password validation result:", isPasswordValid);
     
@@ -737,6 +746,46 @@ router.post("/resend-forgot-password-otp", async (req, res) => {
 
     res.status(200).send({
       message: "Password reset code sent to email",
+    });
+  } catch (err) {
+    res.status(500).send({
+      message: "Something went wrong",
+      error: err.message,
+    });
+  }
+});
+
+// TEMPORARY: Fix password for existing users with double-hashing issue
+router.post("/fix-password", async (req, res) => {
+  try {
+    const { emailId, newPassword } = req.body;
+
+    if (!emailId || !newPassword) {
+      return res.status(400).send({
+        message: "Email and new password are required",
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ emailId });
+    if (!user) {
+      return res.status(404).send({
+        message: "User not found",
+      });
+    }
+
+    // Hash the new password properly
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update user password directly (bypassing pre-save hook)
+    await User.updateOne(
+      { emailId },
+      { $set: { password: hashedPassword } }
+    );
+
+    res.status(200).send({
+      message: "Password updated successfully. You can now login with your new password.",
     });
   } catch (err) {
     res.status(500).send({
