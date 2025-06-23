@@ -78,13 +78,6 @@ connectDB()
     server.listen(process.env.PORT, () => {
       console.log("Server is successfully listening on port", process.env.PORT);
       
-      const password = '8193006167Sid@';  // The password you want to check
-      bcrypt.hash(password, 10).then(hashedPassword => {
-      console.log('Hashed Password:', hashedPassword);
-      }).catch(err => {
-    console.error('Error hashing password:', err);
-});
-      
 });
 
   })

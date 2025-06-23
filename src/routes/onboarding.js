@@ -4,7 +4,7 @@ const { authenticateUser } = require("../middlewares/auth");
 const User = require("../models/User");
 const { validateProfileData } = require("../utils/validation");
 
-// Get current onboarding status
+// Get current onboarding status and data
 router.get("/onboarding/status", authenticateUser, async (req, res) => {
   try {
     const user = await User.findById(req.userId);
@@ -13,30 +13,34 @@ router.get("/onboarding/status", authenticateUser, async (req, res) => {
       return res.status(404).send({ message: "User not found" });
     }
     
-    const missingFields = getMissingFields(user);
     const profileCompletion = user.calculateProfileCompletion();
+    const currentStep = user.onboardingStep || 0;
     
     res.status(200).send({
       onboardingCompleted: user.onboardingCompleted,
+      onboardingStep: currentStep,
       profileCompletion,
-      missingFields,
-      currentStep: getCurrentStep(missingFields),
-      totalSteps: 6,
+      totalSteps: 8,
+      currentStepData: getCurrentStepData(user, currentStep),
       user: {
         firstName: user.firstName,
         lastName: user.lastName,
         emailId: user.emailId,
         dateOfBirth: user.dateOfBirth,
         gender: user.gender,
-        bio: user.bio,
-        profession: user.profession,
-        skills: user.skills,
-        photos: user.photos,
-        location: user.location,
-        preferences: user.preferences,
-        height: user.height,
         religion: user.religion,
-        education: user.education
+        height: user.height,
+        bio: user.bio,
+        location: user.location,
+        profession: user.profession,
+        company: user.company,
+        ctcRange: user.ctcRange,
+        education: user.education,
+        photos: user.photos,
+        socialLinks: user.socialLinks,
+        skills: user.skills,
+        interests: user.interests,
+        preferences: user.preferences
       }
     });
   } catch (err) {
@@ -45,27 +49,32 @@ router.get("/onboarding/status", authenticateUser, async (req, res) => {
   }
 });
 
-// Complete onboarding step
+// Save progress for a specific step and advance to next
 router.post("/onboarding/step/:stepNumber", authenticateUser, async (req, res) => {
   try {
     const { stepNumber } = req.params;
+    const stepNum = parseInt(stepNumber);
     const user = await User.findById(req.userId);
     
     if (!user) {
       return res.status(404).send({ message: "User not found" });
     }
     
+    if (stepNum < 0 || stepNum > 8) {
+      return res.status(400).send({ message: "Invalid step number" });
+    }
+    
     const stepData = req.body;
     let updateData = {};
     
     // Validate and process each step
-    switch (parseInt(stepNumber)) {
-      case 1: // Basic Information
-        const { firstName, lastName, dateOfBirth, gender } = stepData;
+    switch (stepNum) {
+      case 0: // Basic Information (Step 1)
+        const { dateOfBirth, gender, religion, height, bio } = stepData;
         
-        if (!firstName || !lastName || !dateOfBirth || !gender) {
+        if (!dateOfBirth || !gender || !bio || bio.length < 20) {
           return res.status(400).send({ 
-            message: "All basic information fields are required" 
+            message: "Date of birth, gender, and bio (minimum 20 characters) are required" 
           });
         }
         
@@ -79,30 +88,34 @@ router.post("/onboarding/step/:stepNumber", authenticateUser, async (req, res) =
         }
         
         updateData = {
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
           dateOfBirth: new Date(dateOfBirth),
           gender,
-          age
+          bio: bio.trim(),
+          age,
+          onboardingStep: 1
         };
+        
+        if (religion) updateData.religion = religion;
+        if (height) updateData.height = height;
         break;
         
-      case 2: // Bio and About
-        const { bio, height, religion } = stepData;
+      case 1: // Location (Step 2)
+        const { location } = stepData;
         
-        if (!bio || bio.length < 20) {
+        if (!location || !location.city || !location.country) {
           return res.status(400).send({ 
-            message: "Bio must be at least 20 characters long" 
+            message: "City and country are required" 
           });
         }
         
-        updateData = { bio: bio.trim() };
-        if (height) updateData.height = height;
-        if (religion) updateData.religion = religion;
+        updateData = {
+          location,
+          onboardingStep: 2
+        };
         break;
         
-      case 3: // Professional Information
-        const { profession, company, education, experienceLevel } = stepData;
+      case 2: // Professional Details (Step 3)
+        const { profession, company, ctcRange } = stepData;
         
         if (!profession) {
           return res.status(400).send({ 
@@ -110,26 +123,31 @@ router.post("/onboarding/step/:stepNumber", authenticateUser, async (req, res) =
           });
         }
         
-        updateData = { profession };
+        updateData = {
+          profession,
+          onboardingStep: 3
+        };
+        
         if (company) updateData.company = company;
-        if (education) updateData.education = education;
-        if (experienceLevel) updateData.experienceLevel = experienceLevel;
+        if (ctcRange) updateData.ctcRange = ctcRange;
         break;
         
-      case 4: // Skills and Interests
-        const { skills, interests } = stepData;
+      case 3: // Education (Step 4)
+        const { education } = stepData;
         
-        if (!skills || skills.length < 3) {
+        if (!education || (!education.college && !education.isStudent)) {
           return res.status(400).send({ 
-            message: "Please select at least 3 skills" 
+            message: "Education information is required" 
           });
         }
         
-        updateData = { skills };
-        if (interests) updateData.interests = interests;
+        updateData = {
+          education,
+          onboardingStep: 4
+        };
         break;
         
-      case 5: // Photos
+      case 4: // Photos (Step 5)
         const { photos } = stepData;
         
         if (!photos || photos.length === 0) {
@@ -138,17 +156,46 @@ router.post("/onboarding/step/:stepNumber", authenticateUser, async (req, res) =
           });
         }
         
-        // Ensure the first photo is marked as primary if no primary is set
+        // Process photos - ensure first is primary if none specified
         const processedPhotos = photos.map((photo, index) => ({
-          url: photo.url,
-          isPrimary: photo.isPrimary || index === 0
+          url: photo.url || photo,
+          isPrimary: photo.isPrimary || index === 0,
+          uploadedAt: new Date()
         }));
         
-        updateData = { photos: processedPhotos };
+        updateData = {
+          photos: processedPhotos,
+          onboardingStep: 5
+        };
         break;
         
-      case 6: // Preferences and Location
-        const { preferences, location } = stepData;
+      case 5: // Social Links (Step 6)
+        const { socialLinks } = stepData;
+        
+        updateData = {
+          socialLinks: socialLinks || {},
+          onboardingStep: 6
+        };
+        break;
+        
+      case 6: // Skills & Interests (Step 7)
+        const { skills, interests } = stepData;
+        
+        if (!skills || skills.length < 3) {
+          return res.status(400).send({ 
+            message: "Please select at least 3 skills" 
+          });
+        }
+        
+        updateData = {
+          skills,
+          interests: interests || [],
+          onboardingStep: 7
+        };
+        break;
+        
+      case 7: // Preferences (Step 8 - Final)
+        const { preferences } = stepData;
         
         if (!preferences?.ageRange?.min || !preferences?.ageRange?.max) {
           return res.status(400).send({ 
@@ -156,14 +203,11 @@ router.post("/onboarding/step/:stepNumber", authenticateUser, async (req, res) =
           });
         }
         
-        if (!preferences?.genders || preferences.genders.length === 0) {
-          return res.status(400).send({ 
-            message: "Gender preferences are required" 
-          });
-        }
-        
-        updateData = { preferences };
-        if (location) updateData.location = location;
+        updateData = {
+          preferences,
+          onboardingStep: 8,
+          onboardingCompleted: true
+        };
         break;
         
       default:
@@ -172,25 +216,48 @@ router.post("/onboarding/step/:stepNumber", authenticateUser, async (req, res) =
     
     // Update user with step data
     Object.assign(user, updateData);
-    
-    // Check if onboarding is complete
-    const missingFields = getMissingFields(user);
-    if (missingFields.length === 0) {
-      user.onboardingCompleted = true;
-    }
-    
     await user.save();
     
+    const nextStep = user.onboardingCompleted ? null : user.onboardingStep;
+    
     res.status(200).send({
-      message: "Step completed successfully",
+      message: user.onboardingCompleted ? "Onboarding completed successfully!" : "Step saved successfully",
       onboardingCompleted: user.onboardingCompleted,
+      onboardingStep: user.onboardingStep,
+      nextStep,
       profileCompletion: user.profileCompletion,
-      missingFields: getMissingFields(user),
-      nextStep: user.onboardingCompleted ? null : getCurrentStep(getMissingFields(user))
+      currentStepData: nextStep ? getCurrentStepData(user, nextStep) : null,
+      redirectTo: user.onboardingCompleted ? '/app/feed' : null
     });
     
   } catch (err) {
     console.error('Onboarding step error:', err);
+    res.status(500).send({ message: "Something went wrong", error: err.message });
+  }
+});
+
+// Get data for the current step (for pre-populating forms)
+router.get("/onboarding/step/:stepNumber", authenticateUser, async (req, res) => {
+  try {
+    const { stepNumber } = req.params;
+    const stepNum = parseInt(stepNumber);
+    const user = await User.findById(req.userId);
+    
+    if (!user) {
+      return res.status(404).send({ message: "User not found" });
+    }
+    
+    const stepData = getCurrentStepData(user, stepNum);
+    
+    res.status(200).send({
+      stepNumber: stepNum,
+      data: stepData,
+      isCompleted: stepNum < (user.onboardingStep || 0),
+      canAccess: stepNum <= (user.onboardingStep || 0) // Allow access to current and previous steps
+    });
+    
+  } catch (err) {
+    console.error('Get step data error:', err);
     res.status(500).send({ message: "Something went wrong" });
   }
 });
@@ -204,33 +271,47 @@ router.post("/onboarding/complete", authenticateUser, async (req, res) => {
       return res.status(404).send({ message: "User not found" });
     }
     
-    const profileData = req.body;
+    const {
+      dateOfBirth, gender, religion, height, bio,
+      location, profession, company, ctcRange,
+      education, photos, socialLinks, skills, interests, preferences
+    } = req.body;
     
     // Validate all required fields
-    const validation = validateProfileData(profileData);
-    if (!validation.isValid) {
+    if (!dateOfBirth || !gender || !bio || !location?.city || !profession || !photos?.length || !skills?.length >= 3 || !preferences?.ageRange) {
       return res.status(400).send({ 
-        message: "Profile validation failed",
-        errors: validation.errors 
+        message: "Missing required fields for onboarding completion" 
       });
     }
     
-    // Update user with all profile data
-    Object.assign(user, profileData);
-    user.onboardingCompleted = true;
+    // Calculate age
+    const age = Math.floor((Date.now() - new Date(dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000));
+    
+    if (age < 18) {
+      return res.status(400).send({ 
+        message: "You must be 18 or older to use MergeMates" 
+      });
+    }
+    
+    // Update all fields
+    Object.assign(user, {
+      dateOfBirth: new Date(dateOfBirth),
+      gender, religion, height, bio: bio.trim(), age,
+      location, profession, company, ctcRange,
+      education, photos, socialLinks: socialLinks || {},
+      skills, interests: interests || [], preferences,
+      onboardingStep: 8,
+      onboardingCompleted: true
+    });
     
     await user.save();
     
     res.status(200).send({
       message: "Onboarding completed successfully",
       onboardingCompleted: true,
+      onboardingStep: 8,
       profileCompletion: user.profileCompletion,
-      user: {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        profileCompletion: user.profileCompletion,
-        onboardingCompleted: user.onboardingCompleted
-      }
+      redirectTo: '/app/feed'
     });
     
   } catch (err) {
@@ -239,45 +320,51 @@ router.post("/onboarding/complete", authenticateUser, async (req, res) => {
   }
 });
 
-// Helper functions
-const getMissingFields = (user) => {
-  const missing = [];
-  
-  if (!user.firstName) missing.push('firstName');
-  if (!user.lastName) missing.push('lastName');
-  if (!user.dateOfBirth) missing.push('dateOfBirth');
-  if (!user.gender) missing.push('gender');
-  if (!user.bio || user.bio.length < 20) missing.push('bio');
-  if (!user.photos || user.photos.length === 0) missing.push('photos');
-  if (!user.profession) missing.push('profession');
-  if (!user.skills || user.skills.length === 0) missing.push('skills');
-  if (!user.location || !user.location.city) missing.push('location');
-  if (!user.preferences || !user.preferences.ageRange) missing.push('preferences');
-  
-  return missing;
-};
-
-const getCurrentStep = (missingFields) => {
-  if (missingFields.includes('firstName') || missingFields.includes('lastName') || 
-      missingFields.includes('dateOfBirth') || missingFields.includes('gender')) {
-    return 1; // Basic Information
+// Helper function to get current step data for pre-populating forms
+const getCurrentStepData = (user, stepNumber) => {
+  switch (stepNumber) {
+    case 0:
+      return {
+        dateOfBirth: user.dateOfBirth,
+        gender: user.gender,
+        religion: user.religion,
+        height: user.height,
+        bio: user.bio
+      };
+    case 1:
+      return {
+        location: user.location
+      };
+    case 2:
+      return {
+        profession: user.profession,
+        company: user.company,
+        ctcRange: user.ctcRange
+      };
+    case 3:
+      return {
+        education: user.education
+      };
+    case 4:
+      return {
+        photos: user.photos
+      };
+    case 5:
+      return {
+        socialLinks: user.socialLinks
+      };
+    case 6:
+      return {
+        skills: user.skills,
+        interests: user.interests
+      };
+    case 7:
+      return {
+        preferences: user.preferences
+      };
+    default:
+      return {};
   }
-  if (missingFields.includes('bio')) {
-    return 2; // Bio and About
-  }
-  if (missingFields.includes('profession')) {
-    return 3; // Professional Information
-  }
-  if (missingFields.includes('skills')) {
-    return 4; // Skills and Interests
-  }
-  if (missingFields.includes('photos')) {
-    return 5; // Photos
-  }
-  if (missingFields.includes('preferences') || missingFields.includes('location')) {
-    return 6; // Preferences and Location
-  }
-  return null; // All complete
 };
 
 module.exports = router; 

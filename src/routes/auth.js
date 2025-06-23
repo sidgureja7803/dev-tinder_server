@@ -26,17 +26,90 @@ const generateOTP = () => {
 // Function to send OTP via email
 const sendOTP = async (email, otp) => {
   const mailOptions = {
-    from: process.env.EMAIL_USER || "your-email@gmail.com",
+    from: `"Merge Mates" <${process.env.EMAIL_USER || "noreply@mergemates.app"}>`,
     to: email,
-    subject: "Email Verification Code",
+    subject: "🔐 Your Merge Mates Verification Code",
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-        <h2 style="color: #333; text-align: center;">Email Verification</h2>
-        <p style="color: #666;">Please use the following verification code to complete your signup:</p>
-        <div style="background-color: #f5f5f5; padding: 12px; text-align: center; font-size: 24px; letter-spacing: 5px; font-weight: bold; margin: 20px 0; border-radius: 5px;">${otp}</div>
-        <p style="color: #666;">This code will expire in 10 minutes.</p>
-        <p style="color: #666; font-size: 12px; margin-top: 30px; text-align: center;">If you didn't request this, please ignore this email.</p>
-      </div>
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Email Verification</title>
+      </head>
+      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
+          <div style="max-width: 600px; width: 100%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 20px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1); overflow: hidden;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #e91e63, #ad1457); padding: 40px 30px; text-align: center;">
+              <div style="display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                <svg width="50" height="50" viewBox="0 0 32 32" style="margin-right: 15px;">
+                  <circle cx="16" cy="16" r="16" fill="white"/>
+                  <path d="M16 24l-6.5-6.5c-1.5-1.5-1.5-4 0-5.5s4-1.5 5.5 0l1 1 1-1c1.5-1.5 4-1.5 5.5 0s1.5 4 0 5.5L16 24z" fill="#e91e63"/>
+                  <path d="M8 10l-2 2 2 2M24 10l2 2-2 2" stroke="#e91e63" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">Merge Mates</h1>
+              </div>
+              <h2 style="color: white; margin: 0; font-size: 24px; font-weight: 500;">Welcome to the Developer Community! 👨‍💻</h2>
+            </div>
+
+            <!-- Content -->
+            <div style="padding: 40px 30px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <h3 style="color: #333; margin: 0 0 15px 0; font-size: 22px;">Email Verification Required</h3>
+                <p style="color: #666; margin: 0; font-size: 16px; line-height: 1.5;">
+                  Please use the verification code below to complete your signup and join the community of developers, engineers, and tech professionals.
+                </p>
+              </div>
+
+              <!-- OTP Code -->
+              <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 2px dashed #e91e63; border-radius: 15px; padding: 30px; text-align: center; margin: 30px 0;">
+                <p style="color: #666; margin: 0 0 15px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
+                <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(233, 30, 99, 0.1);">
+                  <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #e91e63; font-family: 'Courier New', monospace;">${otp}</span>
+                </div>
+              </div>
+
+              <!-- Instructions -->
+              <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 25px 0;">
+                <h4 style="color: #333; margin: 0 0 15px 0; font-size: 16px;">📱 How to use this code:</h4>
+                <ol style="color: #666; margin: 0; padding-left: 20px; line-height: 1.6;">
+                  <li>Return to the Merge Mates verification page</li>
+                  <li>Enter the 6-digit code above</li>
+                  <li>Click "Verify OTP" to complete your registration</li>
+                </ol>
+              </div>
+
+              <!-- Timer Warning -->
+              <div style="text-align: center; margin: 25px 0;">
+                <p style="color: #ff6b6b; margin: 0; font-size: 14px; font-weight: 500;">
+                  ⏰ This code expires in 10 minutes
+                </p>
+              </div>
+
+              <!-- Call to Action -->
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="#" style="display: inline-block; background: linear-gradient(135deg, #e91e63, #ad1457); color: white; text-decoration: none; padding: 15px 30px; border-radius: 25px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(233, 30, 99, 0.3);">
+                  Continue to Merge Mates →
+                </a>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="background: #f8f9fa; padding: 25px 30px; text-align: center; border-top: 1px solid #e9ecef;">
+              <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">
+                Welcome to the community where developers connect! 💝
+              </p>
+              <p style="color: #999; margin: 0; font-size: 12px;">
+                If you didn't request this verification, please ignore this email.<br>
+                This email was sent from Merge Mates - The Developer Dating Platform
+              </p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
     `
   };
 
@@ -194,8 +267,10 @@ router.post("/verify-otp", async (req, res) => {
         emailId: user.emailId,
         isVerified: user.isVerified,
         onboardingCompleted: user.onboardingCompleted,
+        onboardingStep: user.onboardingStep || 0,
         profileCompletion: user.profileCompletion,
-        requiresOnboarding: !user.onboardingCompleted || user.profileCompletion < 60
+        requiresOnboarding: !user.onboardingCompleted,
+        redirectTo: user.isVerified && !user.onboardingCompleted ? '/onboarding' : '/app/feed'
       },
     });
   } catch (err) {
@@ -309,8 +384,10 @@ router.post("/oauth/google", async (req, res) => {
         photoUrl: user.photoUrl,
         isVerified: user.isVerified,
         onboardingCompleted: user.onboardingCompleted,
+        onboardingStep: user.onboardingStep || 0,
         profileCompletion: user.profileCompletion,
-        requiresOnboarding: !user.onboardingCompleted || user.profileCompletion < 60
+        requiresOnboarding: !user.onboardingCompleted,
+        redirectTo: user.isVerified && !user.onboardingCompleted ? '/onboarding' : '/app/feed'
       },
     });
   } catch (err) {
@@ -376,8 +453,10 @@ router.post("/oauth/github", async (req, res) => {
         photoUrl: user.photoUrl,
         isVerified: user.isVerified,
         onboardingCompleted: user.onboardingCompleted,
+        onboardingStep: user.onboardingStep || 0,
         profileCompletion: user.profileCompletion,
-        requiresOnboarding: !user.onboardingCompleted || user.profileCompletion < 60
+        requiresOnboarding: !user.onboardingCompleted,
+        redirectTo: user.isVerified && !user.onboardingCompleted ? '/onboarding' : '/app/feed'
       },
     });
   } catch (err) {
@@ -460,8 +539,10 @@ router.post("/login", async (req, res) => {
         photoUrl: user.photoUrl,
         isVerified: user.isVerified,
         onboardingCompleted: user.onboardingCompleted,
+        onboardingStep: user.onboardingStep || 0,
         profileCompletion: user.profileCompletion,
-        requiresOnboarding: !user.onboardingCompleted || user.profileCompletion < 60
+        requiresOnboarding: !user.onboardingCompleted,
+        redirectTo: user.isVerified && !user.onboardingCompleted ? '/onboarding' : '/app/feed'
       },
     });
   } catch (err) {

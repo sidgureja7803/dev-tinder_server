@@ -348,6 +348,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    onboardingStep: {
+      type: Number,
+      default: 0, // 0 means not started, 1-8 for each step, 8 means all steps complete
+      min: 0,
+      max: 8
+    },
     // Premium features
     premiumFeatures: {
       unlimitedSwipes: {
