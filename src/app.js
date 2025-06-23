@@ -47,6 +47,7 @@ const feedRouter = require("./routes/feed");
 const matchRouter = require("./routes/match");
 const firebaseAuthRouter = require("./routes/firebaseAuth");
 const onboardingRouter = require("./routes/onboarding");
+const uploadRouter = require("./routes/upload");
 
 app.use("/", authRouter);
 app.use("/", firebaseAuthRouter);
@@ -58,6 +59,7 @@ app.use("/", chatRouter);
 app.use("/", feedRouter);
 app.use("/match", matchRouter);
 app.use("/", onboardingRouter);
+app.use("/", uploadRouter);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
